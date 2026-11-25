@@ -1,17 +1,56 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
+import { Download } from 'lucide-react'
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Leaf, Award, Download } from 'lucide-react'
 import { Header } from "@/components/Header"
 import { AnimatedHero } from "@/components/AnimatedHero"
 import { ProjectCard } from "@/components/ProjectCard"
 import { DynamicBackground } from "@/components/DynamicBackground"
-import Image from "next/image"
+import { ContactForm } from "@/components/ContactForm"
+
+const TABS = ['projects', 'skills', 'about', 'contact'] as const
+type TabValue = (typeof TABS)[number]
+
+function isTabValue(value: string): value is TabValue {
+  return (TABS as readonly string[]).includes(value)
+}
+
+/**
+ * Keeps the open tab in sync with the URL hash, so links like "/#about"
+ * (from the header or the hero button) open the matching tab and scroll to it.
+ */
+function useHashTab(defaultTab: TabValue) {
+  const [activeTab, setActiveTab] = useState<TabValue>(defaultTab)
+  const tabsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (isTabValue(hash)) {
+        setActiveTab(hash)
+        tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [])
+
+  const changeTab = (value: string) => {
+    if (!isTabValue(value)) return
+    setActiveTab(value)
+    // replaceState updates the URL without adding a history entry or jumping.
+    window.history.replaceState(null, '', `#${value}`)
+  }
+
+  return { activeTab, changeTab, tabsRef }
+}
 
 export default function PortfolioPage() {
   const ref = useRef(null)
@@ -21,21 +60,27 @@ export default function PortfolioPage() {
   })
 
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '50%'])
+  const { activeTab, changeTab, tabsRef } = useHashTab('projects')
 
   return (
     <div ref={ref} className="relative min-h-screen overflow-hidden">
       <DynamicBackground />
-      
+
       <Header />
-      
+
       <main className="pt-16">
         <AnimatedHero />
 
-        <motion.div 
+        <motion.div
           className="container mx-auto p-6"
           style={{ y }}
         >
-          <Tabs defaultValue="projects" className="w-full mt-12">
+          <Tabs
+            ref={tabsRef}
+            value={activeTab}
+            onValueChange={changeTab}
+            className="w-full mt-12 scroll-mt-24"
+          >
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="projects">Projects</TabsTrigger>
               <TabsTrigger value="skills">Skills</TabsTrigger>
@@ -45,7 +90,7 @@ export default function PortfolioPage() {
 
             <TabsContent value="projects" className="mt-6">
               <div className="grid gap-6 md:grid-cols-2">
-                <ProjectCard 
+                <ProjectCard
                   id="eco-office-tower"
                   title="Eco-Office Tower"
                   description="Award-winning sustainable office building with LEED Platinum certification"
@@ -54,7 +99,7 @@ export default function PortfolioPage() {
                   awards={["Best Sustainable Design 2023"]}
                   sustainabilityScore={95}
                 />
-                <ProjectCard 
+                <ProjectCard
                   id="smart-bridge"
                   title="Smart Bridge"
                   description="Innovative bridge design with real-time structural health monitoring"
@@ -124,18 +169,7 @@ export default function PortfolioPage() {
                   <CardTitle>Get in Touch</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form className="grid gap-4">
-                    <input 
-                      type="email" 
-                      placeholder="Email"
-                      className="w-full p-2 border rounded bg-background"
-                    />
-                    <textarea 
-                      placeholder="Message"
-                      className="w-full p-2 border rounded h-32 bg-background"
-                    />
-                    <Button>Send Message</Button>
-                  </form>
+                  <ContactForm />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -146,7 +180,12 @@ export default function PortfolioPage() {
   )
 }
 
-function SkillItem({ name, level }) {
+interface SkillItemProps {
+  name: string
+  level: number
+}
+
+function SkillItem({ name, level }: SkillItemProps) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between">
@@ -154,7 +193,7 @@ function SkillItem({ name, level }) {
         <span>{level}%</span>
       </div>
       <div className="h-2 bg-secondary rounded-full">
-        <motion.div 
+        <motion.div
           className="h-full bg-primary rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${level}%` }}
@@ -164,4 +203,3 @@ function SkillItem({ name, level }) {
     </div>
   )
 }
-
