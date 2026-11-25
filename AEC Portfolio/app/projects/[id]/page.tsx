@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -37,17 +39,25 @@ const projects = [
   },
 ]
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
-  const project = projects.find(p => p.id === params.id)
+interface ProjectPageProps {
+  // In Next.js 15, route params arrive as a Promise and must be awaited.
+  params: Promise<{ id: string }>
+}
+
+export default async function ProjectPage({ params }: ProjectPageProps) {
+  const { id } = await params
+  const project = projects.find(p => p.id === id)
 
   if (!project) {
-    return <div>Project not found</div>
+    // Shows Next.js's standard 404 page and returns a real 404 status.
+    notFound()
   }
 
   return (
     <main className="container mx-auto p-6">
-      <Button variant="ghost" href="/" className="mb-6">
-        ← Back to Portfolio
+      {/* Button has no href prop; asChild makes it render the Link instead. */}
+      <Button variant="ghost" className="mb-6" asChild>
+        <Link href="/#projects">← Back to Portfolio</Link>
       </Button>
 
       <Card>
